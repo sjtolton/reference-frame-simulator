@@ -4,270 +4,466 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reference Frame Simulator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0b0f19; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 16px; }
-    .container { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: 16px; }
-    header { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 12px 20px; border-radius: 12px; border: 1px solid #334155; }
-    .round-tag { font-weight: 700; color: #38bdf8; font-size: 1.1rem; }
-    .score-tag { font-weight: 600; color: #f59e0b; }
-    .reset-btn { background: #334155; color: #f8fafc; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; }
-    .reset-btn:hover { background: #475569; }
-    .canvas-container { position: relative; width: 100%; height: 320px; background: #020617; border-radius: 12px; overflow: hidden; border: 2px solid #1e293b; }
-    canvas { width: 100%; height: 100%; display: block; }
-    .instruction-card { background: #1e293b; padding: 14px; border-radius: 10px; text-align: center; font-weight: 600; color: #f1f5f9; border: 1px solid #334155; }
-    .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .control-group { background: #1e293b; padding: 12px; border-radius: 10px; border: 1px solid #334155; display: flex; flex-direction: column; gap: 8px; }
-    .control-group label { font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
-    .btn-row { display: flex; gap: 6px; }
-    .option-btn { flex: 1; padding: 10px 4px; background: #0f172a; border: 1px solid #334155; color: #94a3b8; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; }
-    .option-btn.active { background: #0284c7; color: #ffffff; border-color: #38bdf8; }
-    .action-btn { width: 100%; padding: 14px; background: #2563eb; color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
-    .action-btn:hover { background: #1d4ed8; }
-    .results-card { background: #1e293b; border-radius: 10px; padding: 16px; border: 1px solid #334155; display: none; flex-direction: column; gap: 12px; }
-    .results-card.visible { display: flex; }
-    .status-badge { font-size: 1.1rem; font-weight: 700; padding: 8px 12px; border-radius: 6px; text-align: center; }
-    .status-badge.correct { background: #065f46; color: #34d399; }
-    .status-badge.incorrect { background: #881337; color: #f87171; }
-    .speed-hint-box { font-size: 0.92rem; color: #fbbf24; background: #27272a; border-left: 4px solid #f59e0b; padding: 10px 12px; border-radius: 4px; line-height: 1.4; display: none; }
-    .valid-list-box { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; }
-    .valid-list-title { font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; }
-    .valid-list { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; }
-    .valid-item { display: flex; align-items: center; gap: 6px; }
-    .valid-item.user-selected { color: #38bdf8; font-weight: 700; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #0b0f19;
+      color: #e2e8f0;
+      user-select: none;
+    }
+
+    .glass-panel {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-shadow {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-shadow:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .btn-shadow:active {
+      transform: translateY(0);
+    }
+
+    /* Custom scrollbar for game panels */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
   </style>
 </head>
-<body>
-<div class="container">
-  <header>
-    <span class="round-tag" id="roundDisplay">Round 1 / 9</span>
-    <span class="score-tag" id="scoreDisplay">Score: 0</span>
-    <button class="reset-btn" id="resetBtn">🔄 Reset</button>
-  </header>
-  <div class="canvas-container">
-    <canvas id="simCanvas"></canvas>
-  </div>
-  <div class="instruction-card">
-    🎯 Select a correct combination of reference frames to match the ball bouncing shown
-  </div>
-  <div class="controls-grid" id="controlsGrid">
-    <div class="control-group">
-      <label>Person Motion</label>
-      <div class="btn-row">
-        <button class="option-btn" data-type="person" data-val="-1">Left ⬅️</button>
-        <button class="option-btn active" data-type="person" data-val="0">Still 🛑</button>
-        <button class="option-btn" data-type="person" data-val="1">Right ➡️</button>
+<body class="min-h-screen flex flex-col items-center justify-between p-3 sm:p-6 overflow-x-hidden">
+
+  <div class="w-full max-w-3xl flex flex-col gap-4 my-auto">
+    
+    <!-- HEADER & SCOREBAR -->
+    <header class="glass-panel rounded-2xl p-4 flex justify-between items-center shadow-lg">
+      <div class="flex items-center gap-3">
+        <div class="bg-sky-500/20 text-sky-400 p-2.5 rounded-xl border border-sky-500/30">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="font-extrabold text-lg sm:text-xl text-slate-100 tracking-tight">Reference Frame Lab</h1>
+          <p class="text-xs text-slate-400 font-medium">Relative Motion & Physics Simulation</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-3">
+        <div class="bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-700 text-center">
+          <span class="text-xs text-slate-400 block font-semibold uppercase tracking-wider">Round</span>
+          <span id="roundDisplay" class="font-bold text-sky-400 text-sm sm:text-base">1 / 9</span>
+        </div>
+        <div class="bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-700 text-center">
+          <span class="text-xs text-slate-400 block font-semibold uppercase tracking-wider">Score</span>
+          <span id="scoreDisplay" class="font-bold text-amber-400 text-sm sm:text-base">0</span>
+        </div>
+        <button id="resetBtn" title="Reset Game" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 p-2.5 rounded-xl transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- SIMULATION CANVAS CONTAINER -->
+    <div class="relative w-full h-[280px] sm:h-[340px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
+      <canvas id="simCanvas" class="w-full h-full block"></canvas>
+      
+      <!-- Observer Perspective Indicator -->
+      <div class="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-800 text-xs font-semibold text-slate-300 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Observation Frame: <strong class="text-white font-bold">Ground / Earth</strong></span>
+      </div>
+
+      <!-- Canvas Guidance Banner -->
+      <div id="canvasBanner" class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-md border border-slate-700 px-4 py-1.5 rounded-full text-xs font-medium text-slate-300 shadow-lg text-center whitespace-nowrap">
+        Observe the ball's trajectory relative to the stationary camera frame
       </div>
     </div>
-    <div class="control-group">
-      <label>Floor Motion</label>
-      <div class="btn-row">
-        <button class="option-btn" data-type="floor" data-val="-1">Left ⬅️</button>
-        <button class="option-btn active" data-type="floor" data-val="0">Still 🛑</button>
-        <button class="option-btn" data-type="floor" data-val="1">Right ➡️</button>
+
+    <!-- INSTRUCTION & TASK BAR -->
+    <div class="glass-panel p-3.5 rounded-xl text-center border border-slate-800">
+      <p class="text-sm font-semibold text-slate-200">
+        🎯 <span class="text-sky-400">Challenge:</span> Select the motion combination of the <span class="underline decoration-sky-400">Person</span> and <span class="underline decoration-emerald-400">Floor</span> that yields this observed bounce trajectory!
+      </p>
+    </div>
+
+    <!-- CONTROLS SECTION -->
+    <div id="controlsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <!-- Person Controls -->
+      <div class="glass-panel p-4 rounded-xl border border-slate-800 flex flex-col gap-2.5">
+        <div class="flex justify-between items-center">
+          <label class="text-xs font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+            <span>🏃 Person Velocity</span>
+          </label>
+          <span id="personValTag" class="text-xs font-semibold text-slate-400">0 (Still)</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <button class="option-btn p-2.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 rounded-lg text-slate-300 font-bold text-xs sm:text-sm btn-shadow active transition-all" data-type="person" data-val="-1">⬅️ Left</button>
+          <button class="option-btn p-2.5 bg-sky-600 border border-sky-400 text-white rounded-lg font-bold text-xs sm:text-sm btn-shadow transition-all" data-type="person" data-val="0">🛑 Still</button>
+          <button class="option-btn p-2.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 rounded-lg text-slate-300 font-bold text-xs sm:text-sm btn-shadow transition-all" data-type="person" data-val="1">Right ➡️</button>
+        </div>
+      </div>
+
+      <!-- Floor Controls -->
+      <div class="glass-panel p-4 rounded-xl border border-slate-800 flex flex-col gap-2.5">
+        <div class="flex justify-between items-center">
+          <label class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+            <span>🧱 Floor Velocity</span>
+          </label>
+          <span id="floorValTag" class="text-xs font-semibold text-slate-400">0 (Still)</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <button class="option-btn p-2.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 rounded-lg text-slate-300 font-bold text-xs sm:text-sm btn-shadow transition-all" data-type="floor" data-val="-1">⬅️ Left</button>
+          <button class="option-btn p-2.5 bg-emerald-600 border border-emerald-400 text-white rounded-lg font-bold text-xs sm:text-sm btn-shadow transition-all" data-type="floor" data-val="0">🛑 Still</button>
+          <button class="option-btn p-2.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 rounded-lg text-slate-300 font-bold text-xs sm:text-sm btn-shadow transition-all" data-type="floor" data-val="1">Right ➡️</button>
+        </div>
       </div>
     </div>
-  </div>
-  <button class="action-btn" id="actionBtn">Check Prediction 💡</button>
-  <div class="results-card" id="resultsCard">
-    <div class="status-badge" id="statusBadge"></div>
-    <div class="speed-hint-box" id="speedHintBox"></div>
-    <div class="valid-list-box">
-      <div class="valid-list-title">All Valid Combinations For This Trajectory:</div>
-      <ul class="valid-list" id="validList"></ul>
+
+    <!-- ACTION BUTTON -->
+    <button id="actionBtn" class="w-full py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold rounded-xl shadow-lg hover:shadow-sky-500/25 transition-all text-base tracking-wide flex items-center justify-center gap-2 border border-sky-400/30">
+      <span>Check Prediction</span>
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+      </svg>
+    </button>
+
+    <!-- RESULTS AND FEEDBACK CARD -->
+    <div id="resultsCard" class="hidden glass-panel p-5 rounded-2xl border border-slate-800 flex-col gap-4 animate-fade-in">
+      <div id="statusBadge" class="py-2.5 px-4 rounded-xl font-bold text-center text-sm sm:text-base border shadow-sm"></div>
+      
+      <div id="speedHintBox" class="hidden text-xs sm:text-sm text-amber-300 bg-amber-950/40 border-l-4 border-amber-500 p-3 rounded-r-lg leading-relaxed"></div>
+
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5">
+        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>All Equivalent Physics Solutions:</span>
+        </div>
+        <ul id="validList" class="flex flex-col gap-1.5 text-xs sm:text-sm font-medium"></ul>
+      </div>
     </div>
+
   </div>
-</div>
-<script>
-  const canvas = document.getElementById('simCanvas');
-  const ctx = canvas.getContext('2d');
-  let currentRound = 1, score = 0, state = 'GUESSING', roundSequence = [];
-  let currentScenario = { person: 1, floor: 0 }, userPerson = 0, userFloor = 0;
-  let ballX = 0, ballY = 0, ballVy = 4;
-  const gravity = 0.25, floorY = 260;
-  let trail = [], speedParticles = [];
 
-  function initScenarios() {
-    const allScenarios = [];
-    for (let p of [-1, 0, 1]) {
-      for (let f of [-1, 0, 1]) {
-        allScenarios.push({ person: p, floor: f });
-      }
-    }
-    const fixedR1 = { person: 1, floor: 0 };
-    const remaining = allScenarios.filter(s => !(s.person === fixedR1.person && s.floor === fixedR1.floor));
-    for (let i = remaining.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
-    }
-    roundSequence = [fixedR1, ...remaining];
-  }
+  <!-- JAVASCRIPT SIMULATION LOGIC -->
+  <script>
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
 
-  function setupCanvas() {
-    canvas.width = canvas.parentElement.clientWidth;
-    canvas.height = canvas.parentElement.clientHeight;
-  }
-  window.addEventListener('resize', setupCanvas);
-  setupCanvas();
+    // App state
+    let currentRound = 1;
+    let score = 0;
+    let state = 'GUESSING'; // 'GUESSING' | 'REVEALED'
+    let roundSequence = [];
+    let currentScenario = { person: 1, floor: 0 };
+    let userPerson = 0;
+    let userFloor = 0;
 
-  function loadRound(r) {
-    currentRound = r;
-    state = 'GUESSING';
-    currentScenario = roundSequence[r - 1];
-    ballX = canvas.width / 2; ballY = 100; ballVy = 2; trail = []; speedParticles = [];
-    document.getElementById('roundDisplay').textContent = `Round ${currentRound} / 9`;
-    document.getElementById('scoreDisplay').textContent = `Score: ${score}`;
-    document.getElementById('actionBtn').textContent = "Check Prediction 💡";
-    document.getElementById('resultsCard').classList.remove('visible');
-    document.getElementById('speedHintBox').style.display = 'none';
-    document.getElementById('controlsGrid').style.opacity = '1';
-    document.getElementById('controlsGrid').style.pointerEvents = 'auto';
-  }
+    // Physics state
+    let ballX = 0;
+    let ballY = 0;
+    let ballVy = 2;
+    const gravity = 0.22;
+    let floorY = 0;
+    let trail = [];
+    let speedParticles = [];
 
-  function getValidCombinations(targetNet) {
-    const valid = [];
-    for (let p of [-1, 0, 1]) {
-      for (let f of [-1, 0, 1]) {
-        if (p + f === targetNet) valid.push({ person: p, floor: f });
-      }
-    }
-    return valid;
-  }
-
-  function formatCombo(c) {
-    const pStr = c.person === -1 ? 'Left ⬅️' : c.person === 1 ? 'Right ➡️' : 'Still 🛑';
-    const fStr = c.floor === -1 ? 'Left ⬅️' : c.floor === 1 ? 'Right ➡️' : 'Still 🛑';
-    return `Person = ${pStr} | Floor = ${fStr}`;
-  }
-
-  document.querySelectorAll('.option-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const type = e.target.dataset.type, val = parseInt(e.target.dataset.val);
-      document.querySelectorAll(`.option-btn[data-type="${type}"]`).forEach(b => b.classList.remove('active'));
-      e.target.classList.add('active');
-      if (type === 'person') userPerson = val;
-      if (type === 'floor') userFloor = val;
-    });
-  });
-
-  document.getElementById('actionBtn').addEventListener('click', () => {
-    if (state === 'GUESSING') {
-      state = 'REVEALED';
-      const targetNet = currentScenario.person + currentScenario.floor;
-      const userNet = userPerson + userFloor;
-      const isCorrect = targetNet === userNet;
-      if (isCorrect) score++;
-      document.getElementById('scoreDisplay').textContent = `Score: ${score}`;
-      const badge = document.getElementById('statusBadge');
-      const speedHint = document.getElementById('speedHintBox');
-
-      if (isCorrect) {
-        badge.className = "status-badge correct";
-        badge.textContent = "✅ CORRECT! (Equivalent Motion)";
-        speedHint.style.display = 'none';
-      } else {
-        badge.className = "status-badge incorrect";
-        badge.textContent = "❌ INCORRECT";
-        if (targetNet !== 0 && Math.sign(targetNet) === Math.sign(userNet)) {
-          if (Math.abs(targetNet) > Math.abs(userNet)) {
-            speedHint.textContent = "💡 Hint: You got the direction right! But notice the ball is moving FASTER than what you picked (both frames are moving together).";
-          } else {
-            speedHint.textContent = "💡 Hint: You got the direction right! But notice the ball is moving SLOWER than what you picked (only one frame is moving).";
-          }
-          speedHint.style.display = 'block';
-        } else if (targetNet === 0 && userNet !== 0) {
-          speedHint.textContent = "💡 Hint: The ball is bouncing straight up and down! Look for a setup where the two motions cancel each other out.";
-          speedHint.style.display = 'block';
-        } else {
-          speedHint.textContent = "💡 Hint: Check the direction! The ball is moving the opposite way.";
-          speedHint.style.display = 'block';
+    function initScenarios() {
+      const allScenarios = [];
+      for (let p of [-1, 0, 1]) {
+        for (let f of [-1, 0, 1]) {
+          allScenarios.push({ person: p, floor: f });
         }
       }
+      // Fixed round 1 for smooth intro
+      const fixedR1 = { person: 1, floor: 0 };
+      const remaining = allScenarios.filter(s => !(s.person === fixedR1.person && s.floor === fixedR1.floor));
+      
+      // Shuffle remaining 8 rounds
+      for (let i = remaining.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
+      }
+      roundSequence = [fixedR1, ...remaining];
+    }
 
-      const validListEl = document.getElementById('validList');
-      validListEl.innerHTML = '';
-      getValidCombinations(targetNet).forEach(c => {
-        const li = document.createElement('li');
-        const isUserChoice = (c.person === userPerson && c.floor === userFloor);
-        li.className = `valid-item ${isUserChoice ? 'user-selected' : ''}`;
-        li.textContent = `• ${formatCombo(c)} ${isUserChoice ? ' (Your Choice)' : ''}`;
-        validListEl.appendChild(li);
+    function setupCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+      floorY = rect.height - 50;
+    }
+    window.addEventListener('resize', setupCanvas);
+
+    document.querySelectorAll('.option-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const type = e.currentTarget.dataset.type;
+        const val = parseInt(e.currentTarget.dataset.val);
+
+        // Update active class styles
+        document.querySelectorAll(`.option-btn[data-type="${type}"]`).forEach(b => {
+          b.className = "option-btn p-2.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 rounded-lg text-slate-300 font-bold text-xs sm:text-sm btn-shadow transition-all";
+        });
+
+        const activeClass = type === 'person' 
+          ? "option-btn p-2.5 bg-sky-600 border border-sky-400 text-white rounded-lg font-bold text-xs sm:text-sm btn-shadow transition-all" 
+          : "option-btn p-2.5 bg-emerald-600 border border-emerald-400 text-white rounded-lg font-bold text-xs sm:text-sm btn-shadow transition-all";
+        
+        e.currentTarget.className = activeClass;
+
+        if (type === 'person') {
+          userPerson = val;
+          document.getElementById('personValTag').textContent = val === -1 ? '-1 (Left)' : val === 1 ? '+1 (Right)' : '0 (Still)';
+        } else {
+          userFloor = val;
+          document.getElementById('floorValTag').textContent = val === -1 ? '-1 (Left)' : val === 1 ? '+1 (Right)' : '0 (Still)';
+        }
       });
+    });
 
-      document.getElementById('resultsCard').classList.add('visible');
-      document.getElementById('controlsGrid').style.opacity = '0.5';
-      document.getElementById('controlsGrid').style.pointerEvents = 'none';
-      document.getElementById('actionBtn').textContent = currentRound < 9 ? "Next Round ➡️" : "Restart Game 🔄";
-    } else {
-      if (currentRound < 9) loadRound(currentRound + 1);
-      else { score = 0; initScenarios(); loadRound(1); }
-    }
-  });
+    function loadRound(r) {
+      currentRound = r;
+      state = 'GUESSING';
+      currentScenario = roundSequence[r - 1];
+      
+      const rect = canvas.getBoundingClientRect();
+      ballX = rect.width / 2;
+      ballY = 80;
+      ballVy = 1.5;
+      trail = [];
+      speedParticles = [];
 
-  document.getElementById('resetBtn').addEventListener('click', () => {
-    score = 0; initScenarios(); loadRound(1);
-  });
-
-  function animate() {
-    const netSpeed = currentScenario.person + currentScenario.floor;
-    const speedMagnitude = Math.abs(netSpeed);
-    ballX += netSpeed * 1.6;
-    if (ballX > canvas.width + 20) ballX = -20;
-    if (ballX < -20) ballX = canvas.width + 20;
-    ballVy += gravity; ballY += ballVy;
-    if (ballY >= floorY - 12) { ballY = floorY - 12; ballVy = -8.5; }
-
-    const maxTrailLength = speedMagnitude === 2 ? 40 : speedMagnitude === 1 ? 20 : 8;
-    trail.push({ x: ballX, y: ballY });
-    if (trail.length > maxTrailLength) trail.shift();
-
-    if (speedMagnitude === 2 && Math.random() < 0.3) {
-      speedParticles.push({
-        x: ballX - (netSpeed * 15),
-        y: ballY + (Math.random() * 20 - 10),
-        length: 25, alpha: 0.8
-      });
+      document.getElementById('roundDisplay').textContent = `${currentRound} / 9`;
+      document.getElementById('scoreDisplay').textContent = score;
+      document.getElementById('actionBtn').innerHTML = `
+        <span>Check Prediction</span>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+        </svg>
+      `;
+      document.getElementById('resultsCard').classList.add('hidden');
+      document.getElementById('resultsCard').classList.remove('flex');
+      document.getElementById('speedHintBox').classList.add('hidden');
+      
+      const controls = document.getElementById('controlsGrid');
+      controls.style.opacity = '1';
+      controls.style.pointerEvents = 'auto';
     }
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (let i = speedParticles.length - 1; i >= 0; i--) {
-      const p = speedParticles[i];
-      ctx.strokeStyle = `rgba(56, 189, 248, ${p.alpha})`;
-      ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(p.x, p.y);
-      ctx.lineTo(p.x - (netSpeed * p.length), p.y); ctx.stroke();
-      p.alpha -= 0.04; if (p.alpha <= 0) speedParticles.splice(i, 1);
+    function getValidCombinations(targetNet) {
+      const valid = [];
+      for (let p of [-1, 0, 1]) {
+        for (let f of [-1, 0, 1]) {
+          if (p + f === targetNet) valid.push({ person: p, floor: f });
+        }
+      }
+      return valid;
     }
 
-    if (state === 'REVEALED') {
-      ctx.strokeStyle = '#334155'; ctx.lineWidth = 4; ctx.beginPath();
-      ctx.moveTo(0, floorY); ctx.lineTo(canvas.width, floorY); ctx.stroke();
-      const pX = ballX;
-      ctx.strokeStyle = '#f8fafc'; ctx.lineWidth = 3; ctx.beginPath();
-      ctx.arc(pX, floorY - 40, 10, 0, Math.PI * 2); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(pX, floorY - 30); ctx.lineTo(pX, floorY - 15);
-      ctx.moveTo(pX, floorY - 25); ctx.lineTo(pX - 10, floorY - 15);
-      ctx.moveTo(pX, floorY - 25); ctx.lineTo(pX + 10, floorY - 15);
-      ctx.moveTo(pX, floorY - 15); ctx.lineTo(pX - 8, floorY);
-      ctx.moveTo(pX, floorY - 15); ctx.lineTo(pX + 8, floorY); ctx.stroke();
-    } else {
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, floorY, canvas.width, canvas.height - floorY);
+    function formatCombo(c) {
+      const pStr = c.person === -1 ? 'Left ⬅️' : c.person === 1 ? 'Right ➡️' : 'Still 🛑';
+      const fStr = c.floor === -1 ? 'Left ⬅️' : c.floor === 1 ? 'Right ➡️' : 'Still 🛑';
+      return `Person: ${pStr} | Floor: ${fStr}`;
     }
 
-    const trailColor = speedMagnitude === 2 ? 'rgba(56, 189, 248, 0.7)' : 'rgba(245, 158, 11, 0.4)';
-    ctx.strokeStyle = trailColor; ctx.lineWidth = speedMagnitude === 2 ? 3 : 2; ctx.beginPath();
-    for (let i = 0; i < trail.length; i++) {
-      if (i === 0) ctx.moveTo(trail[i].x, trail[i].y);
-      else ctx.lineTo(trail[i].x, trail[i].y);
+    document.getElementById('actionBtn').addEventListener('click', () => {
+      if (state === 'GUESSING') {
+        state = 'REVEALED';
+        const targetNet = currentScenario.person + currentScenario.floor;
+        const userNet = userPerson + userFloor;
+        const isCorrect = targetNet === userNet;
+
+        if (isCorrect) score++;
+        document.getElementById('scoreDisplay').textContent = score;
+
+        const badge = document.getElementById('statusBadge');
+        const speedHint = document.getElementById('speedHintBox');
+
+        if (isCorrect) {
+          badge.className = "py-2.5 px-4 rounded-xl font-bold text-center text-sm sm:text-base border shadow-sm bg-emerald-950/60 border-emerald-500/50 text-emerald-300";
+          badge.textContent = "🎉 Excellent! Your frame velocities match the total horizontal motion.";
+          speedHint.classList.add('hidden');
+        } else {
+          badge.className = "py-2.5 px-4 rounded-xl font-bold text-center text-sm sm:text-base border shadow-sm bg-rose-950/60 border-rose-500/50 text-rose-300";
+          badge.textContent = "❌ Not quite right!";
+
+          if (targetNet !== 0 && Math.sign(targetNet) === Math.sign(userNet)) {
+            if (Math.abs(targetNet) > Math.abs(userNet)) {
+              speedHint.textContent = "💡 Physics Hint: Direction was right, but the ball was moving faster! Both reference frames added together in that direction.";
+            } else {
+              speedHint.textContent = "💡 Physics Hint: Direction was right, but the observed ball was moving slower than your combined prediction.";
+            }
+            speedHint.classList.remove('hidden');
+          } else if (targetNet === 0 && userNet !== 0) {
+            speedHint.textContent = "💡 Physics Hint: The ball bounced straight up and down! The Person and Floor velocities must cancel each other out (sum to 0).";
+            speedHint.classList.remove('hidden');
+          } else {
+            speedHint.textContent = "💡 Physics Hint: Check the horizontal direction of the bounce arc relative to ground observer.";
+            speedHint.classList.remove('hidden');
+          }
+        }
+
+        // Render valid solutions
+        const validListEl = document.getElementById('validList');
+        validListEl.innerHTML = '';
+        getValidCombinations(targetNet).forEach(c => {
+          const li = document.createElement('li');
+          const isUserChoice = (c.person === userPerson && c.floor === userFloor);
+          li.className = `p-2 rounded-lg flex items-center justify-between ${isUserChoice ? 'bg-sky-950/80 border border-sky-500/50 text-sky-200 font-bold' : 'bg-slate-800/50 text-slate-300'}`;
+          li.innerHTML = `
+            <span>• ${formatCombo(c)}</span>
+            ${isUserChoice ? '<span class="text-xs bg-sky-500 text-slate-950 px-2 py-0.5 rounded font-extrabold">Your Selection</span>' : ''}
+          `;
+          validListEl.appendChild(li);
+        });
+
+        document.getElementById('resultsCard').classList.remove('hidden');
+        document.getElementById('resultsCard').classList.add('flex');
+        
+        const controls = document.getElementById('controlsGrid');
+        controls.style.opacity = '0.4';
+        controls.style.pointerEvents = 'none';
+
+        document.getElementById('actionBtn').innerHTML = currentRound < 9 ? `
+          <span>Next Round</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        ` : `
+          <span>Restart Game</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        `;
+      } else {
+        if (currentRound < 9) {
+          loadRound(currentRound + 1);
+        } else {
+          score = 0;
+          initScenarios();
+          loadRound(1);
+        }
+      }
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      score = 0;
+      initScenarios();
+      loadRound(1);
+    });
+
+    function animate() {
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+
+      const netSpeed = currentScenario.person + currentScenario.floor;
+      const speedMagnitude = Math.abs(netSpeed);
+
+      // Horizontal position wrapping
+      ballX += netSpeed * 1.8;
+      if (ballX > w + 20) ballX = -20;
+      if (ballX < -20) ballX = w + 20;
+
+      // Vertical bounce gravity
+      ballVy += gravity;
+      ballY += ballVy;
+      if (ballY >= floorY - 12) {
+        ballY = floorY - 12;
+        ballVy = -7.5;
+      }
+
+      // Maintain motion trail
+      const maxTrailLength = speedMagnitude === 2 ? 35 : speedMagnitude === 1 ? 20 : 8;
+      trail.push({ x: ballX, y: ballY });
+      if (trail.length > maxTrailLength) trail.shift();
+
+      // Clear canvas
+      ctx.clearRect(0, 0, w, h);
+
+      // Render grid lines for reference background
+      ctx.strokeStyle = 'rgba(51, 65, 85, 0.25)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < w; x += 40) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+
+      // Draw Floor Ground
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, floorY, w, h - floorY);
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(0, floorY); ctx.lineTo(w, floorY); ctx.stroke();
+
+      // Render Stick figure when revealed
+      if (state === 'REVEALED') {
+        const pX = ballX;
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 2.5;
+        // Head
+        ctx.beginPath(); ctx.arc(pX, floorY - 36, 8, 0, Math.PI * 2); ctx.stroke();
+        // Body
+        ctx.beginPath(); ctx.moveTo(pX, floorY - 28); ctx.lineTo(pX, floorY - 14); stroke();
+        // Arms
+        ctx.beginPath(); ctx.moveTo(pX - 8, floorY - 22); ctx.lineTo(pX + 8, floorY - 22); ctx.stroke();
+        // Legs
+        ctx.beginPath(); ctx.moveTo(pX, floorY - 14); ctx.lineTo(pX - 6, floorY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(pX, floorY - 14); ctx.lineTo(pX + 6, floorY); ctx.stroke();
+      }
+
+      // Render Trajectory Arc
+      if (trail.length > 1) {
+        ctx.strokeStyle = speedMagnitude === 2 ? 'rgba(56, 189, 248, 0.7)' : 'rgba(245, 158, 11, 0.5)';
+        ctx.lineWidth = speedMagnitude === 2 ? 3 : 2;
+        ctx.beginPath();
+        for (let i = 0; i < trail.length; i++) {
+          if (i === 0) ctx.moveTo(trail[i].x, trail[i].y);
+          else ctx.lineTo(trail[i].x, trail[i].y);
+        }
+        ctx.stroke();
+      }
+
+      // Render Ball
+      ctx.fillStyle = speedMagnitude === 2 ? '#38bdf8' : '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      requestAnimationFrame(animate);
     }
-    ctx.stroke();
 
-    ctx.fillStyle = speedMagnitude === 2 ? '#38bdf8' : '#f59e0b';
-    ctx.beginPath(); ctx.arc(ballX, ballY, 12, 0, Math.PI * 2); ctx.fill();
-    requestAnimationFrame(animate);
-  }
-
-  initScenarios(); loadRound(1); requestAnimationFrame(animate);
-</script>
+    window.onload = function() {
+      setupCanvas();
+      initScenarios();
+      loadRound(1);
+      requestAnimationFrame(animate);
+    };
+  </script>
 </body>
 </html>
