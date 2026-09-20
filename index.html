@@ -3,467 +3,839 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reference Frame Simulator</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Reference Frame Lab - Relative Motion Simulation</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: #0b0f19;
       color: #e2e8f0;
-      user-select: none;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 16px;
     }
 
-    .glass-panel {
-      background: rgba(30, 41, 59, 0.7);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+    .app-container {
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
 
-    .btn-shadow {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    header {
+      background: #1e293b;
+      padding: 16px 24px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
     }
 
-    .btn-shadow:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    .title-group h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
-    .btn-shadow:active {
-      transform: translateY(0);
+    .title-group p {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-top: 2px;
     }
 
-    /* Custom scrollbar for game panels */
-    ::-webkit-scrollbar {
-      width: 6px;
+    .stats-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
     }
-    ::-webkit-scrollbar-track {
+
+    .stat-badge {
       background: #0f172a;
+      border: 1px solid #334155;
+      padding: 6px 12px;
+      border-radius: 8px;
+      text-align: center;
     }
-    ::-webkit-scrollbar-thumb {
+
+    .stat-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+      font-weight: 700;
+    }
+
+    .stat-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+
+    .reset-btn, .help-btn {
       background: #334155;
-      border-radius: 3px;
+      color: #f8fafc;
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
+
+    .reset-btn:hover, .help-btn:hover {
+      background: #475569;
+    }
+
+    .canvas-card {
+      background: #020617;
+      border-radius: 12px;
+      border: 2px solid #1e293b;
+      overflow: hidden;
+      position: relative;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+    }
+
+    canvas {
+      width: 100%;
+      height: 320px;
+      display: block;
+    }
+
+    .frame-indicator {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid #334155;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #38bdf8;
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .frame-indicator::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .prompt-banner {
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 12px 16px;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #e2e8f0;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .control-card {
+      background: #1e293b;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .control-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #38bdf8;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .control-val-display {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .option-btn {
+      flex: 1;
+      padding: 10px 6px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .option-btn:hover {
+      border-color: #64748b;
+      color: #f1f5f9;
+    }
+
+    .option-btn.active-p {
+      background: #0284c7;
+      color: #ffffff;
+      border-color: #38bdf8;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+    }
+
+    .option-btn.active-f {
+      background: #059669;
+      color: #ffffff;
+      border-color: #34d399;
+      box-shadow: 0 0 10px rgba(52, 211, 153, 0.3);
+    }
+
+    .action-btn {
+      width: 100%;
+      padding: 16px;
+      background: #2563eb;
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    .action-btn:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    .feedback-card {
+      background: #1e293b;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      padding: 16px;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .feedback-card.visible {
+      display: flex;
+    }
+
+    .status-badge {
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 1.05rem;
+      text-align: center;
+    }
+
+    .status-badge.correct {
+      background: #064e3b;
+      color: #34d399;
+      border: 1px solid #10b981;
+    }
+
+    .status-badge.incorrect {
+      background: #4c0519;
+      color: #fb7185;
+      border: 1px solid #f43f5e;
+    }
+
+    .hint-box {
+      background: #18181b;
+      border-left: 4px solid #f59e0b;
+      padding: 10px 14px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      color: #fbbf24;
+      line-height: 1.4;
+      display: none;
+    }
+
+    .valid-combos-box {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .valid-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .valid-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.85rem;
+    }
+
+    .valid-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #cbd5e1;
+    }
+
+    .valid-item.match {
+      color: #38bdf8;
+      font-weight: 700;
+    }
+
+    /* Intro Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(2, 6, 23, 0.85);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+      opacity: 1;
+      transition: opacity 0.3s;
+    }
+
+    .modal-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .modal-content {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      max-width: 540px;
+      width: 100%;
+      padding: 24px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .modal-icon {
+      width: 44px;
+      height: 44px;
+      background: #0284c7;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+    }
+
+    .modal-title-text h2 {
+      font-size: 1.2rem;
+      color: #f8fafc;
+    }
+
+    .modal-title-text p {
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+
+    .modal-body {
+      font-size: 0.92rem;
+      line-height: 1.5;
+      color: #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .info-card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: #0f172a;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+    }
+
+    .info-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+
+    .start-btn {
+      background: #0284c7;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .start-btn:hover {
+      background: #0369a1;
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-between p-3 sm:p-6 overflow-x-hidden">
+<body>
 
-  <div class="w-full max-w-3xl flex flex-col gap-4 my-auto">
-    
-    <!-- HEADER & SCOREBAR -->
-    <header class="glass-panel rounded-2xl p-4 flex justify-between items-center shadow-lg">
-      <div class="flex items-center gap-3">
-        <div class="bg-sky-500/20 text-sky-400 p-2.5 rounded-xl border border-sky-500/30">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
-        <div>
-          <h1 class="font-extrabold text-lg sm:text-xl text-slate-100 tracking-tight">Reference Frame Lab</h1>
-          <p class="text-xs text-slate-400 font-medium">Relative Motion & Physics Simulation</p>
-        </div>
+  <div class="app-container">
+    <header>
+      <div class="title-group">
+        <h1>⚡ Reference Frame Lab</h1>
+        <p>Relative Motion & Physics Simulation</p>
       </div>
-      
-      <div class="flex items-center gap-3">
-        <div class="bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-700 text-center">
-          <span class="text-xs text-slate-400 block font-semibold uppercase tracking-wider">Round</span>
-          <span id="roundDisplay" class="font-bold text-sky-400 text-sm sm:text-base">1 / 9</span>
+      <div class="stats-group">
+        <div class="stat-badge">
+          <div class="stat-label">Round</div>
+          <div class="stat-value" id="roundDisplay">1 / 9</div>
         </div>
-        <div class="bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-700 text-center">
-          <span class="text-xs text-slate-400 block font-semibold uppercase tracking-wider">Score</span>
-          <span id="scoreDisplay" class="font-bold text-amber-400 text-sm sm:text-base">0</span>
+        <div class="stat-badge">
+          <div class="stat-label">Score</div>
+          <div class="stat-value" id="scoreDisplay">0</div>
         </div>
-        <button id="resetBtn" title="Reset Game" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 p-2.5 rounded-xl transition-all">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        </button>
+        <button class="help-btn" id="helpBtn" title="How to Play">❓</button>
+        <button class="reset-btn" id="resetBtn" title="Reset Game">🔄</button>
       </div>
     </header>
 
-    <!-- SIMULATION CANVAS CONTAINER -->
-    <div class="relative w-full h-[280px] sm:h-[340px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
-      <canvas id="simCanvas" class="w-full h-full block"></canvas>
-      
-      <!-- Observer Perspective Indicator -->
-      <div class="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-800 text-xs font-semibold text-slate-300 flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span>Observation Frame: <strong class="text-white font-bold">Ground / Earth</strong></span>
-      </div>
-
-      <!-- Canvas Guidance Banner -->
-      <div id="canvasBanner" class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-md border border-slate-700 px-4 py-1.5 rounded-full text-xs font-medium text-slate-300 shadow-lg text-center whitespace-nowrap">
-        Observe the ball's trajectory relative to the stationary camera frame
-      </div>
+    <div class="canvas-card">
+      <div class="frame-indicator">Observation Frame: Ground / Earth</div>
+      <canvas id="simCanvas"></canvas>
     </div>
 
-    <!-- INSTRUCTION & TASK BAR -->
-    <div class="glass-panel p-3.5 rounded-xl text-center border border-slate-800">
-      <p class="text-sm font-semibold text-slate-200">
-        🎯 <span class="text-sky-400">Challenge:</span> Select the motion combination of the <span class="underline decoration-sky-400">Person</span> and <span class="underline decoration-emerald-400">Floor</span> that yields this observed bounce trajectory!
-      </p>
+    <div class="prompt-banner">
+      🎯 Challenge: Select the motion combination of the Person and Floor that yields this observed bounce trajectory!
     </div>
 
-    <!-- CONTROLS SECTION -->
-    <div id="controlsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <!-- Person Controls -->
-      <div class="glass-panel p-4 rounded-xl border border-slate-800 flex flex-col gap-2.5">
-        <div class="flex justify-between items-center">
-          <label class="text-xs font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
-            <span>🏃 Person Velocity</span>
-          </label>
-          <span id="personValTag" class="text-xs font-semibold text-slate-400">0 (Still)</span>
+    <div class="controls-grid" id="controlsGrid">
+      <div class="control-card">
+        <div class="control-header">
+          <span class="control-title">🏃 Person Motion</span>
+          <span class="control-val-display" id="personValLabel">0 (Still)</span>
         </div>
-        <div class="grid grid-cols-3 gap-2">
-          <button class="option-btn p-2.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 rounded-lg text-slate-300 font-bold text-xs sm:text-sm btn-shadow active transition-all" data-type="person" data-val="-1">⬅️ Left</button>
-          <button class="option-btn p-2.5 bg-sky-600 border border-sky-400 text-white rounded-lg font-bold text-xs sm:text-sm btn-shadow transition-all" data-type="person" data-val="0">🛑 Still</button>
-          <button class="option-btn p-2.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 rounded-lg text-slate-300 font-bold text-xs sm:text-sm btn-shadow transition-all" data-type="person" data-val="1">Right ➡️</button>
+        <div class="btn-group">
+          <button class="option-btn" data-type="person" data-val="-1">⬅️ Left</button>
+          <button class="option-btn active-p" data-type="person" data-val="0">🛑 Still</button>
+          <button class="option-btn" data-type="person" data-val="1">Right ➡️</button>
         </div>
       </div>
 
-      <!-- Floor Controls -->
-      <div class="glass-panel p-4 rounded-xl border border-slate-800 flex flex-col gap-2.5">
-        <div class="flex justify-between items-center">
-          <label class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-            <span>🧱 Floor Velocity</span>
-          </label>
-          <span id="floorValTag" class="text-xs font-semibold text-slate-400">0 (Still)</span>
+      <div class="control-card">
+        <div class="control-header">
+          <span class="control-title">🛹 Floor Motion</span>
+          <span class="control-val-display" id="floorValLabel">0 (Still)</span>
         </div>
-        <div class="grid grid-cols-3 gap-2">
-          <button class="option-btn p-2.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 rounded-lg text-slate-300 font-bold text-xs sm:text-sm btn-shadow transition-all" data-type="floor" data-val="-1">⬅️ Left</button>
-          <button class="option-btn p-2.5 bg-emerald-600 border border-emerald-400 text-white rounded-lg font-bold text-xs sm:text-sm btn-shadow transition-all" data-type="floor" data-val="0">🛑 Still</button>
-          <button class="option-btn p-2.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 rounded-lg text-slate-300 font-bold text-xs sm:text-sm btn-shadow transition-all" data-type="floor" data-val="1">Right ➡️</button>
+        <div class="btn-group">
+          <button class="option-btn" data-type="floor" data-val="-1">⬅️ Left</button>
+          <button class="option-btn active-f" data-type="floor" data-val="0">🛑 Still</button>
+          <button class="option-btn" data-type="floor" data-val="1">Right ➡️</button>
         </div>
       </div>
     </div>
 
-    <!-- ACTION BUTTON -->
-    <button id="actionBtn" class="w-full py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold rounded-xl shadow-lg hover:shadow-sky-500/25 transition-all text-base tracking-wide flex items-center justify-center gap-2 border border-sky-400/30">
-      <span>Check Prediction</span>
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-      </svg>
-    </button>
+    <button class="action-btn" id="actionBtn">Check Prediction 💡</button>
 
-    <!-- RESULTS AND FEEDBACK CARD -->
-    <div id="resultsCard" class="hidden glass-panel p-5 rounded-2xl border border-slate-800 flex-col gap-4 animate-fade-in">
-      <div id="statusBadge" class="py-2.5 px-4 rounded-xl font-bold text-center text-sm sm:text-base border shadow-sm"></div>
-      
-      <div id="speedHintBox" class="hidden text-xs sm:text-sm text-amber-300 bg-amber-950/40 border-l-4 border-amber-500 p-3 rounded-r-lg leading-relaxed"></div>
-
-      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5">
-        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>All Equivalent Physics Solutions:</span>
-        </div>
-        <ul id="validList" class="flex flex-col gap-1.5 text-xs sm:text-sm font-medium"></ul>
+    <div class="feedback-card" id="feedbackCard">
+      <div class="status-badge" id="statusBadge"></div>
+      <div class="hint-box" id="hintBox"></div>
+      <div class="valid-combos-box">
+        <div class="valid-title">All Valid Combinations For This Trajectory:</div>
+        <ul class="valid-list" id="validList"></ul>
       </div>
     </div>
-
   </div>
 
-  <!-- JAVASCRIPT SIMULATION LOGIC -->
-  <script>
-    const canvas = document.getElementById('simCanvas');
-    const ctx = canvas.getContext('2d');
+  <!-- Intro Dialog Modal -->
+  <div class="modal-overlay" id="introModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-icon">🏀</div>
+        <div class="modal-title-text">
+          <h2>Reference Frame Lab</h2>
+          <p>Physics Activity Briefing</p>
+        </div>
+      </div>
+      <div class="modal-body">
+        <p>Welcome! In this simulation, you are observing a bouncing ball from a <strong>stationary camera on the ground</strong>.</p>
+        <div class="info-card-list">
+          <div class="info-item">
+            <span>🏃</span>
+            <span><strong>Person:</strong> Bounces the ball while moving Left (-1), Standing Still (0), or moving Right (+1).</span>
+          </div>
+          <div class="info-item">
+            <span>🛹</span>
+            <span><strong>Floor / Belt:</strong> Can also move Left (-1), Stand Still (0), or move Right (+1).</span>
+          </div>
+          <div class="info-item">
+            <span>➕</span>
+            <span><strong>Combined Trajectory:</strong> The total horizontal motion you see is the sum of both frame velocities: <br><em>v<sub>net</sub> = v<sub>person</sub> + v<sub>floor</sub></em></span>
+          </div>
+        </div>
+        <p>Observe the ball's movement pattern, then select a valid combination of Person and Floor velocities that match what you see!</p>
+      </div>
+      <button class="start-btn" id="startBtn">Begin Simulation 🚀</button>
+    </div>
+  </div>
 
-    // App state
-    let currentRound = 1;
-    let score = 0;
-    let state = 'GUESSING'; // 'GUESSING' | 'REVEALED'
-    let roundSequence = [];
-    let currentScenario = { person: 1, floor: 0 };
-    let userPerson = 0;
-    let userFloor = 0;
+<script>
+  const canvas = document.getElementById('simCanvas');
+  const ctx = canvas.getContext('2d');
 
-    // Physics state
-    let ballX = 0;
-    let ballY = 0;
-    let ballVy = 2;
-    const gravity = 0.22;
-    let floorY = 0;
-    let trail = [];
-    let speedParticles = [];
+  let currentRound = 1;
+  let score = 0;
+  let state = 'GUESSING'; // 'GUESSING' or 'REVEALED'
+  let roundSequence = [];
+  let currentScenario = { person: 1, floor: 0 };
 
-    function initScenarios() {
-      const allScenarios = [];
-      for (let p of [-1, 0, 1]) {
-        for (let f of [-1, 0, 1]) {
-          allScenarios.push({ person: p, floor: f });
+  let userPerson = 0;
+  let userFloor = 0;
+
+  // Animation variables
+  let animId = null;
+  let ballX = 0;
+  let ballY = 0;
+  let ballVy = 0;
+  const gravity = 0.22;
+  let floorY = 250;
+  let trail = [];
+
+  function initScenarios() {
+    const all = [];
+    for (let p of [-1, 0, 1]) {
+      for (let f of [-1, 0, 1]) {
+        all.push({ person: p, floor: f });
+      }
+    }
+    // Fixed Round 1: Person = Right (+1), Floor = Still (0)
+    const fixedR1 = { person: 1, floor: 0 };
+    const remaining = all.filter(s => !(s.person === fixedR1.person && s.floor === fixedR1.floor));
+    
+    // Shuffle remaining 8 rounds
+    for (let i = remaining.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
+    }
+    roundSequence = [fixedR1, ...remaining];
+  }
+
+  function setupCanvas() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    floorY = canvas.height - 60;
+  }
+
+  function resetBallPosition() {
+    ballX = canvas.width / 2;
+    ballY = floorY - 140;
+    ballVy = 0;
+    trail = [];
+  }
+
+  function loadRound(r) {
+    currentRound = r;
+    state = 'GUESSING';
+    currentScenario = roundSequence[r - 1];
+
+    document.getElementById('roundDisplay').textContent = `${currentRound} / 9`;
+    document.getElementById('scoreDisplay').textContent = `${score}`;
+    document.getElementById('actionBtn').textContent = "Check Prediction 💡";
+    document.getElementById('feedbackCard').classList.remove('visible');
+    document.getElementById('hintBox').style.display = 'none';
+
+    document.getElementById('controlsGrid').style.opacity = '1';
+    document.getElementById('controlsGrid').style.pointerEvents = 'auto';
+
+    resetBallPosition();
+    
+    if (!animId) {
+      animate();
+    }
+  }
+
+  function formatVel(val) {
+    if (val === -1) return '-1 (Left)';
+    if (val === 1) return '+1 (Right)';
+    return '0 (Still)';
+  }
+
+  function getValidCombinations(targetNet) {
+    const list = [];
+    for (let p of [-1, 0, 1]) {
+      for (let f of [-1, 0, 1]) {
+        if (p + f === targetNet) {
+          list.push({ person: p, floor: f });
         }
       }
-      // Fixed round 1 for smooth intro
-      const fixedR1 = { person: 1, floor: 0 };
-      const remaining = allScenarios.filter(s => !(s.person === fixedR1.person && s.floor === fixedR1.floor));
-      
-      // Shuffle remaining 8 rounds
-      for (let i = remaining.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
-      }
-      roundSequence = [fixedR1, ...remaining];
     }
+    return list;
+  }
 
-    function setupCanvas() {
-      const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
-      ctx.scale(dpr, dpr);
-      floorY = rect.height - 50;
-    }
-    window.addEventListener('resize', setupCanvas);
+  // Event Listeners for Controls
+  document.querySelectorAll('.option-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const target = e.currentTarget;
+      const type = target.dataset.type;
+      const val = parseInt(target.dataset.val);
 
-    document.querySelectorAll('.option-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const type = e.currentTarget.dataset.type;
-        const val = parseInt(e.currentTarget.dataset.val);
-
-        // Update active class styles
-        document.querySelectorAll(`.option-btn[data-type="${type}"]`).forEach(b => {
-          b.className = "option-btn p-2.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 rounded-lg text-slate-300 font-bold text-xs sm:text-sm btn-shadow transition-all";
-        });
-
-        const activeClass = type === 'person' 
-          ? "option-btn p-2.5 bg-sky-600 border border-sky-400 text-white rounded-lg font-bold text-xs sm:text-sm btn-shadow transition-all" 
-          : "option-btn p-2.5 bg-emerald-600 border border-emerald-400 text-white rounded-lg font-bold text-xs sm:text-sm btn-shadow transition-all";
-        
-        e.currentTarget.className = activeClass;
-
-        if (type === 'person') {
-          userPerson = val;
-          document.getElementById('personValTag').textContent = val === -1 ? '-1 (Left)' : val === 1 ? '+1 (Right)' : '0 (Still)';
-        } else {
-          userFloor = val;
-          document.getElementById('floorValTag').textContent = val === -1 ? '-1 (Left)' : val === 1 ? '+1 (Right)' : '0 (Still)';
-        }
-      });
-    });
-
-    function loadRound(r) {
-      currentRound = r;
-      state = 'GUESSING';
-      currentScenario = roundSequence[r - 1];
-      
-      const rect = canvas.getBoundingClientRect();
-      ballX = rect.width / 2;
-      ballY = 80;
-      ballVy = 1.5;
-      trail = [];
-      speedParticles = [];
-
-      document.getElementById('roundDisplay').textContent = `${currentRound} / 9`;
-      document.getElementById('scoreDisplay').textContent = score;
-      document.getElementById('actionBtn').innerHTML = `
-        <span>Check Prediction</span>
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-        </svg>
-      `;
-      document.getElementById('resultsCard').classList.add('hidden');
-      document.getElementById('resultsCard').classList.remove('flex');
-      document.getElementById('speedHintBox').classList.add('hidden');
-      
-      const controls = document.getElementById('controlsGrid');
-      controls.style.opacity = '1';
-      controls.style.pointerEvents = 'auto';
-    }
-
-    function getValidCombinations(targetNet) {
-      const valid = [];
-      for (let p of [-1, 0, 1]) {
-        for (let f of [-1, 0, 1]) {
-          if (p + f === targetNet) valid.push({ person: p, floor: f });
-        }
-      }
-      return valid;
-    }
-
-    function formatCombo(c) {
-      const pStr = c.person === -1 ? 'Left ⬅️' : c.person === 1 ? 'Right ➡️' : 'Still 🛑';
-      const fStr = c.floor === -1 ? 'Left ⬅️' : c.floor === 1 ? 'Right ➡️' : 'Still 🛑';
-      return `Person: ${pStr} | Floor: ${fStr}`;
-    }
-
-    document.getElementById('actionBtn').addEventListener('click', () => {
-      if (state === 'GUESSING') {
-        state = 'REVEALED';
-        const targetNet = currentScenario.person + currentScenario.floor;
-        const userNet = userPerson + userFloor;
-        const isCorrect = targetNet === userNet;
-
-        if (isCorrect) score++;
-        document.getElementById('scoreDisplay').textContent = score;
-
-        const badge = document.getElementById('statusBadge');
-        const speedHint = document.getElementById('speedHintBox');
-
-        if (isCorrect) {
-          badge.className = "py-2.5 px-4 rounded-xl font-bold text-center text-sm sm:text-base border shadow-sm bg-emerald-950/60 border-emerald-500/50 text-emerald-300";
-          badge.textContent = "🎉 Excellent! Your frame velocities match the total horizontal motion.";
-          speedHint.classList.add('hidden');
-        } else {
-          badge.className = "py-2.5 px-4 rounded-xl font-bold text-center text-sm sm:text-base border shadow-sm bg-rose-950/60 border-rose-500/50 text-rose-300";
-          badge.textContent = "❌ Not quite right!";
-
-          if (targetNet !== 0 && Math.sign(targetNet) === Math.sign(userNet)) {
-            if (Math.abs(targetNet) > Math.abs(userNet)) {
-              speedHint.textContent = "💡 Physics Hint: Direction was right, but the ball was moving faster! Both reference frames added together in that direction.";
-            } else {
-              speedHint.textContent = "💡 Physics Hint: Direction was right, but the observed ball was moving slower than your combined prediction.";
-            }
-            speedHint.classList.remove('hidden');
-          } else if (targetNet === 0 && userNet !== 0) {
-            speedHint.textContent = "💡 Physics Hint: The ball bounced straight up and down! The Person and Floor velocities must cancel each other out (sum to 0).";
-            speedHint.classList.remove('hidden');
-          } else {
-            speedHint.textContent = "💡 Physics Hint: Check the horizontal direction of the bounce arc relative to ground observer.";
-            speedHint.classList.remove('hidden');
-          }
-        }
-
-        // Render valid solutions
-        const validListEl = document.getElementById('validList');
-        validListEl.innerHTML = '';
-        getValidCombinations(targetNet).forEach(c => {
-          const li = document.createElement('li');
-          const isUserChoice = (c.person === userPerson && c.floor === userFloor);
-          li.className = `p-2 rounded-lg flex items-center justify-between ${isUserChoice ? 'bg-sky-950/80 border border-sky-500/50 text-sky-200 font-bold' : 'bg-slate-800/50 text-slate-300'}`;
-          li.innerHTML = `
-            <span>• ${formatCombo(c)}</span>
-            ${isUserChoice ? '<span class="text-xs bg-sky-500 text-slate-950 px-2 py-0.5 rounded font-extrabold">Your Selection</span>' : ''}
-          `;
-          validListEl.appendChild(li);
-        });
-
-        document.getElementById('resultsCard').classList.remove('hidden');
-        document.getElementById('resultsCard').classList.add('flex');
-        
-        const controls = document.getElementById('controlsGrid');
-        controls.style.opacity = '0.4';
-        controls.style.pointerEvents = 'none';
-
-        document.getElementById('actionBtn').innerHTML = currentRound < 9 ? `
-          <span>Next Round</span>
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-          </svg>
-        ` : `
-          <span>Restart Game</span>
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        `;
+      if (type === 'person') {
+        userPerson = val;
+        document.querySelectorAll('.option-btn[data-type="person"]').forEach(b => b.classList.remove('active-p'));
+        target.classList.add('active-p');
+        document.getElementById('personValLabel').textContent = formatVel(val);
       } else {
-        if (currentRound < 9) {
-          loadRound(currentRound + 1);
+        userFloor = val;
+        document.querySelectorAll('.option-btn[data-type="floor"]').forEach(b => b.classList.remove('active-f'));
+        target.classList.add('active-f');
+        document.getElementById('floorValLabel').textContent = formatVel(val);
+      }
+    });
+  });
+
+  document.getElementById('actionBtn').addEventListener('click', () => {
+    if (state === 'GUESSING') {
+      state = 'REVEALED';
+      const targetNet = currentScenario.person + currentScenario.floor;
+      const userNet = userPerson + userFloor;
+      const isCorrect = (targetNet === userNet);
+
+      if (isCorrect) score++;
+      document.getElementById('scoreDisplay').textContent = `${score}`;
+
+      const badge = document.getElementById('statusBadge');
+      const hint = document.getElementById('hintBox');
+
+      if (isCorrect) {
+        badge.className = 'status-badge correct';
+        badge.textContent = '✅ CORRECT PREDICTION!';
+        hint.style.display = 'none';
+      } else {
+        badge.className = 'status-badge incorrect';
+        badge.textContent = '❌ INCORRECT';
+
+        if (targetNet !== 0 && Math.sign(targetNet) === Math.sign(userNet)) {
+          if (Math.abs(targetNet) > Math.abs(userNet)) {
+            hint.textContent = '💡 Hint: Direction is correct, but the ball is moving FASTER than predicted!';
+          } else {
+            hint.textContent = '💡 Hint: Direction is correct, but the ball is moving SLOWER than predicted!';
+          }
+          hint.style.display = 'block';
+        } else if (targetNet === 0 && userNet !== 0) {
+          hint.textContent = '💡 Hint: The ball is moving straight vertically! Look for speeds that cancel each other out.';
+          hint.style.display = 'block';
         } else {
-          score = 0;
-          initScenarios();
-          loadRound(1);
+          hint.textContent = '💡 Hint: The ball is moving in the opposite horizontal direction!';
+          hint.style.display = 'block';
         }
       }
-    });
 
-    document.getElementById('resetBtn').addEventListener('click', () => {
-      score = 0;
-      initScenarios();
-      loadRound(1);
-    });
+      // Populate valid combinations list
+      const validListEl = document.getElementById('validList');
+      validListEl.innerHTML = '';
+      getValidCombinations(targetNet).forEach(combo => {
+        const li = document.createElement('li');
+        const isUserMatch = (combo.person === userPerson && combo.floor === userFloor);
+        li.className = `valid-item ${isUserMatch ? 'match' : ''}`;
+        li.innerHTML = `• Person: <strong>${formatVel(combo.person)}</strong> | Floor: <strong>${formatVel(combo.floor)}</strong> ${isUserMatch ? '👈 (Your Pick)' : ''}`;
+        validListEl.appendChild(li);
+      });
 
-    function animate() {
-      const rect = canvas.getBoundingClientRect();
-      const w = rect.width;
-      const h = rect.height;
+      document.getElementById('feedbackCard').classList.add('visible');
+      document.getElementById('controlsGrid').style.opacity = '0.5';
+      document.getElementById('controlsGrid').style.pointerEvents = 'none';
+      document.getElementById('actionBtn').textContent = currentRound < 9 ? "Next Round ➡️" : "Restart Lab 🔄";
 
-      const netSpeed = currentScenario.person + currentScenario.floor;
-      const speedMagnitude = Math.abs(netSpeed);
-
-      // Horizontal position wrapping
-      ballX += netSpeed * 1.8;
-      if (ballX > w + 20) ballX = -20;
-      if (ballX < -20) ballX = w + 20;
-
-      // Vertical bounce gravity
-      ballVy += gravity;
-      ballY += ballVy;
-      if (ballY >= floorY - 12) {
-        ballY = floorY - 12;
-        ballVy = -7.5;
+    } else {
+      if (currentRound < 9) {
+        loadRound(currentRound + 1);
+      } else {
+        score = 0;
+        initScenarios();
+        loadRound(1);
       }
+    }
+  });
 
-      // Maintain motion trail
-      const maxTrailLength = speedMagnitude === 2 ? 35 : speedMagnitude === 1 ? 20 : 8;
-      trail.push({ x: ballX, y: ballY });
-      if (trail.length > maxTrailLength) trail.shift();
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    score = 0;
+    initScenarios();
+    loadRound(1);
+  });
 
-      // Clear canvas
-      ctx.clearRect(0, 0, w, h);
+  // Modal handlers
+  const introModal = document.getElementById('introModal');
+  document.getElementById('startBtn').addEventListener('click', () => {
+    introModal.classList.add('hidden');
+  });
+  document.getElementById('helpBtn').addEventListener('click', () => {
+    introModal.classList.remove('hidden');
+  });
 
-      // Render grid lines for reference background
-      ctx.strokeStyle = 'rgba(51, 65, 85, 0.25)';
-      ctx.lineWidth = 1;
-      for (let x = 0; x < w; x += 40) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
-      }
+  function animate() {
+    const netSpeed = currentScenario.person + currentScenario.floor;
 
-      // Draw Floor Ground
-      ctx.fillStyle = '#020617';
-      ctx.fillRect(0, floorY, w, h - floorY);
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(0, floorY); ctx.lineTo(w, floorY); ctx.stroke();
+    // Update Physics
+    ballX += netSpeed * 1.8;
+    if (ballX > canvas.width + 20) ballX = -20;
+    if (ballX < -20) ballX = canvas.width + 20;
 
-      // Render Stick figure when revealed
-      if (state === 'REVEALED') {
-        const pX = ballX;
-        ctx.strokeStyle = '#94a3b8';
-        ctx.lineWidth = 2.5;
-        // Head
-        ctx.beginPath(); ctx.arc(pX, floorY - 36, 8, 0, Math.PI * 2); ctx.stroke();
-        // Body
-        ctx.beginPath(); ctx.moveTo(pX, floorY - 28); ctx.lineTo(pX, floorY - 14); stroke();
-        // Arms
-        ctx.beginPath(); ctx.moveTo(pX - 8, floorY - 22); ctx.lineTo(pX + 8, floorY - 22); ctx.stroke();
-        // Legs
-        ctx.beginPath(); ctx.moveTo(pX, floorY - 14); ctx.lineTo(pX - 6, floorY); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(pX, floorY - 14); ctx.lineTo(pX + 6, floorY); ctx.stroke();
-      }
+    ballVy += gravity;
+    ballY += ballVy;
 
-      // Render Trajectory Arc
-      if (trail.length > 1) {
-        ctx.strokeStyle = speedMagnitude === 2 ? 'rgba(56, 189, 248, 0.7)' : 'rgba(245, 158, 11, 0.5)';
-        ctx.lineWidth = speedMagnitude === 2 ? 3 : 2;
-        ctx.beginPath();
-        for (let i = 0; i < trail.length; i++) {
-          if (i === 0) ctx.moveTo(trail[i].x, trail[i].y);
-          else ctx.lineTo(trail[i].x, trail[i].y);
-        }
-        ctx.stroke();
-      }
+    if (ballY >= floorY - 14) {
+      ballY = floorY - 14;
+      ballVy = -8.2;
+    }
 
-      // Render Ball
-      ctx.fillStyle = speedMagnitude === 2 ? '#38bdf8' : '#f59e0b';
+    // Trail
+    trail.push({ x: ballX, y: ballY });
+    if (trail.length > 30) trail.shift();
+
+    // Render Canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Grid lines (Ground Reference Frame)
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += 40) {
       ctx.beginPath();
-      ctx.arc(ballX, ballY, 10, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#ffffff';
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+    }
+
+    // Floor
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, floorY, canvas.width, canvas.height - floorY);
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, floorY);
+    ctx.lineTo(canvas.width, floorY);
+    ctx.stroke();
+
+    // Trail rendering
+    if (trail.length > 1) {
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let i = 0; i < trail.length; i++) {
+        if (i === 0) ctx.moveTo(trail[i].x, trail[i].y);
+        else ctx.lineTo(trail[i].x, trail[i].y);
+      }
+      ctx.stroke();
+    }
+
+    // Reveal Mode Visuals (Stick Figure)
+    if (state === 'REVEALED') {
+      const pX = ballX;
+      ctx.strokeStyle = '#94a3b8';
       ctx.lineWidth = 2;
+
+      // Head
+      ctx.beginPath();
+      ctx.arc(pX, floorY - 50, 10, 0, Math.PI * 2);
       ctx.stroke();
 
-      requestAnimationFrame(animate);
+      // Body & Arms
+      ctx.beginPath();
+      ctx.moveTo(pX, floorY - 40); ctx.lineTo(pX, floorY - 20);
+      ctx.moveTo(pX, floorY - 32); ctx.lineTo(pX - 12, floorY - 22);
+      ctx.moveTo(pX, floorY - 32); ctx.lineTo(pX + 12, floorY - 22);
+      ctx.moveTo(pX, floorY - 20); ctx.lineTo(pX - 10, floorY);
+      ctx.moveTo(pX, floorY - 20); ctx.lineTo(pX + 10, floorY);
+      ctx.stroke();
     }
 
-    window.onload = function() {
-      setupCanvas();
-      initScenarios();
-      loadRound(1);
-      requestAnimationFrame(animate);
-    };
-  </script>
+    // Ball
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(ballX, ballY, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    animId = requestAnimationFrame(animate);
+  }
+
+  window.addEventListener('resize', setupCanvas);
+
+  // Initialize
+  setupCanvas();
+  initScenarios();
+  loadRound(1);
+</script>
 </body>
 </html>
